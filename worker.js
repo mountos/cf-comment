@@ -1,77 +1,76 @@
 const i18n = {
-    'zh-CN': {
-        'home_title': '评论系统 - 首页',
-        'login_title': '管理员登录',
-        'password_placeholder': '请输入密码',
-        'login_btn': '登录',
-        'admin_panel_title': '讨论区管理面板',
-        'area_list_title': '已有讨论区列表',
-        'create_area_title': '创建新的讨论区',
-        'area_name_placeholder': '名称',
-        'area_key_placeholder': '唯一标识',
-        'area_intro_placeholder': '简介(可选)',
-        'create_btn': '创建',
-        'report_management_title': '举报管理',
-        'loading': '加载中...',
-        'no_areas': '暂无讨论区',
-        'area_id': 'ID',
-        'area_name': '名称',
-        'area_key': 'Key',
-        'area_hidden': '隐藏',
-        'area_intro': '简介',
-        'area_comments': '评论',
-        'area_action': '操作',
-        'view': '查看',
-        'hide': '隐藏',
-        'unhide': '取消隐藏',
-        'delete': '删除',
-        'no_reports': '暂无举报',
-        'report_id': 'ID',
-        'report_comment_id': '评论ID',
-        'report_content': '内容',
-        'report_reason': '理由',
-        'report_created_at': '创建时间',
-        'report_resolved': '已处理',
-        'resolve_report': '标记已处理',
-        'toggle_hide_comment': '隐藏/恢复',
-        'delete_confirm': '确认删除该讨论区？此操作不可恢复',
-        'notification_input_password': '请输入密码',
-        'notification_login_failed': '密码错误',
-        'notification_create_success': '创建成功',
-        'notification_create_failed': '创建失败',
-        'notification_delete_success': '删除成功',
-        'notification_delete_failed': '删除失败',
-        'notification_toggle_success': '操作成功',
-        'notification_toggle_failed': '操作失败',
-        'notification_report_success': '举报成功',
-        'notification_report_failed': '举报失败',
-        'notification_report_resolved': '已标记为处理',
-        'notification_comment_hidden_toggle': '评论隐藏状态已切换',
-        'notification_comment_submit_failed': '评论提交失败',
-        'notification_missing_input': '名称和唯一标识必填',
-        'notification_report_missing_reason': '缺少举报理由',
-        'notification_comment_missing_content': '评论内容不能为空',
-        'notification_unauthorized': '未授权',
-        'notification_not_found': '未找到',
-        'comment_title': '评论区',
-        'comment_placeholder': 'Html语法可用，支持回复',
-        'submit_comment_btn': '提交评论',
-        'comment_tip': '发布后无法删除',
-        'no_comments': '暂无评论',
-        'reply_btn': '回复',
-        'report_comment': '举报',
-        'comment_hidden': '此评论已被隐藏',
-        'view_comment': '查看',
-        'collapse_comment': '收起',
-        'language': '语言',
-        'theme': '主题',
-        'light': '浅色',
-        'dark': '深色',
-        'like': '点赞',
-        'liked': '已点赞',
-        'show_comment_input': '显示评论框'
-    },
-    'en': {
+        'zh-TW': {
+            'home_title': '評論系統 - 首頁',
+            'login_title': '管理員登入',
+            'password_placeholder': '請輸入密碼',
+            'login_btn': '登入',
+            'admin_panel_title': '討論區管理面板',
+            'area_list_title': '已有討論區列表',
+            'create_area_title': '建立新的討論區',
+            'area_name_placeholder': '名稱',
+            'area_key_placeholder': '唯一識別',
+            'area_intro_placeholder': '簡介(可選)',
+            'create_btn': '建立',
+            'report_management_title': '檢舉管理',
+            'loading': '載入中...', 
+            'no_areas': '暫無討論區',
+            'area_id': 'ID',
+            'area_name': '名稱',
+            'area_key': 'Key',
+            'area_hidden': '隱藏',
+            'area_intro': '簡介',
+            'area_comments': '評論',
+            'area_action': '操作',
+            'view': '查看',
+            'hide': '隱藏',
+            'unhide': '取消隱藏',
+            'delete': '刪除',
+            'no_reports': '暫無檢舉',
+            'report_id': 'ID',
+            'report_comment_id': '評論ID',
+            'report_content': '內容',
+            'report_reason': '理由',
+            'report_created_at': '建立時間',
+            'report_resolved': '已處理',
+            'resolve_report': '標記已處理',
+            'toggle_hide_comment': '隱藏/恢復',
+            'delete_confirm': '確認刪除該討論區？此操作不可恢復',
+            'notification_input_password': '請輸入密碼',
+            'notification_login_failed': '密碼錯誤',
+            'notification_create_success': '建立成功',
+            'notification_create_failed': '建立失敗',
+            'notification_delete_success': '刪除成功',
+            'notification_delete_failed': '刪除失敗',
+            'notification_toggle_success': '操作成功',
+            'notification_toggle_failed': '操作失敗',
+            'notification_report_success': '檢舉成功',
+            'notification_report_failed': '檢舉失敗',
+            'notification_report_resolved': '已標記為處理',
+            'notification_comment_hidden_toggle': '評論隱藏狀態已切換',
+            'notification_comment_submit_failed': '評論提交失敗',
+            'notification_missing_input': '名稱和唯一識別為必填',
+            'notification_report_missing_reason': '缺少檢舉理由',
+            'notification_comment_missing_content': '評論內容不能為空',
+            'notification_unauthorized': '未授權',
+            'notification_not_found': '未找到',
+            'comment_title': '評論區',
+            'comment_placeholder': '可使用 Html 語法，支援回覆',
+            'submit_comment_btn': '提交評論',
+            'comment_tip': '發佈後無法刪除',
+            'no_comments': '暫無評論',
+            'reply_btn': '回覆',
+            'report_comment': '檢舉',
+            'comment_hidden': '此評論已被隱藏',
+            'view_comment': '查看',
+            'collapse_comment': '收合',
+            'language': '語言',
+            'theme': '主題',
+            'light': '淺色',
+            'dark': '深色',
+            'like': '讚',
+            'liked': '已讚',
+            'show_comment_input': '顯示評論框'
+        },    'en': {
         'home_title': 'Comment System - Home',
         'login_title': 'Admin Login',
         'password_placeholder': 'Enter password',
@@ -185,7 +184,7 @@ function escapeHtml(str) {
     if (acceptLanguage) {
       const languages = acceptLanguage.split(',').map(lang => lang.trim().split(';')[0]);
       if (languages.some(lang => lang.startsWith('zh'))) {
-        return 'zh-CN';
+        return 'zh-TW';
       }
     }
     return 'en'; // 默认英文
@@ -348,11 +347,11 @@ function escapeHtml(str) {
             .reply-box { margin-top: 5px; }
             .markdown-content { font-size: 14px; color: var(--comment-text-color); }
             .form-group {
-                display:flex;flex-direction:row;align-items: flex-start;
+                display:flex;flex-direction:column;align-items: flex-end; gap: 10px;
             }
             .form-group textarea {
-                background: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px; width: calc(100% - 18px); height: 60px;
-                resize: vertical; margin-bottom: 10px; font-size: 14px;
+                background: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px; width: 100%; box-sizing: border-box; height: 100px;
+                resize: vertical; margin-bottom: 0; font-size: 14px;
             }
             .form-group .comment-action {
                 display:flex;flex-direction:column;justify-content: flex-end;align-items: flex-end;
@@ -816,12 +815,12 @@ function escapeHtml(str) {
         const toggleLangBtn = document.getElementById('toggleLang');
         if(toggleLangBtn){
         toggleLangBtn.addEventListener('click', async () => {
-        const currentLang = document.documentElement.lang || 'zh-CN';
-        const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+        const currentLang = document.documentElement.lang || 'zh-TW';
+        const newLang = currentLang === 'zh-TW' ? 'en' : 'zh-TW';
         const res = await fetch('/setLang', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang: newLang }) });
         if(res.ok){
         document.documentElement.lang = newLang;
-        toggleLangBtn.textContent = newLang === 'zh-CN' ? 'EN' : '中文';
+        toggleLangBtn.textContent = newLang === 'zh-TW' ? 'EN' : '中文';
             location.reload();
         }   else {
         showNotification('${t.notification_toggle_failed}：' + (await res.text()));
@@ -973,7 +972,7 @@ function escapeHtml(str) {
  <body>
  <div class="top-actions">
  <button id="toggleTheme">${theme === 'light' ? t.dark : t.light}</button>
- <button id="toggleLang">${lang === 'zh-CN' ? 'EN' : '中文'}</button>
+ <button id="toggleLang">${lang === 'zh-TW' ? 'EN' : '中文'}</button>
  </div>
  <h1>${t.home_title}</h1>
  <!-- 通知栏 -->
@@ -1261,12 +1260,12 @@ function escapeHtml(str) {
  // 切换语言
  const toggleLangBtn = document.getElementById('toggleLang');
  toggleLangBtn.addEventListener('click', async () => {
- const currentLang = document.documentElement.lang || 'zh-CN';
- const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+ const currentLang = document.documentElement.lang || 'zh-TW';
+ const newLang = currentLang === 'zh-TW' ? 'en' : 'zh-TW';
  const res = await fetch('/setLang', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang: newLang }) });
  if(res.ok){
  document.documentElement.lang = newLang;
- toggleLangBtn.textContent = newLang === 'zh-CN' ? 'EN' : '中文';
+ toggleLangBtn.textContent = newLang === 'zh-TW' ? 'EN' : '中文';
      location.reload();
  }   else {
  showNotification('${t.notification_toggle_failed}：' + (await res.text()));
@@ -1577,7 +1576,7 @@ function escapeHtml(str) {
  <body>
  <div class="top-actions">
  <button id="toggleTheme">${theme === 'light' ? t.dark : t.light}</button>
- <button id="toggleLang">${lang === 'zh-CN' ? 'EN' : '中文'}</button>
+ <button id="toggleLang">${lang === 'zh-TW' ? 'EN' : '中文'}</button>
  </div>
  <h1>${escapeHtml(area.name)}</h1>
  <div class="hint">${area.intro || ''}</div>
@@ -1922,12 +1921,12 @@ function escapeHtml(str) {
  const toggleLangBtn = document.getElementById('toggleLang');
  if(toggleLangBtn){
  toggleLangBtn.addEventListener('click', async () => {
- const currentLang = document.documentElement.lang || 'zh-CN';
- const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+ const currentLang = document.documentElement.lang || 'zh-TW';
+ const newLang = currentLang === 'zh-TW' ? 'en' : 'zh-TW';
  const res = await fetch('/setLang', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang: newLang }) });
  if(res.ok){
  document.documentElement.lang = newLang;
- toggleLangBtn.textContent = newLang === 'zh-CN' ? 'EN' : '中文';
+ toggleLangBtn.textContent = newLang === 'zh-TW' ? 'EN' : '中文';
      location.reload();
  }   else {
  showNotification('${t.notification_toggle_failed}：' + (await res.text()));
