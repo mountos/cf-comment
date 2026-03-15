@@ -298,14 +298,15 @@ function escapeHtml(str) {
       // 新增：处理嵌入页面的路由
       if (pathname.startsWith('/embed/area/') && request.method === 'GET') {
           const areaKey = decodeURIComponent(pathname.replace(/^\/embed\/area\//, ''));
-        return handleEmbedCommentArea(areaKey, request, env, lang, theme);
+          const pageKey = url.searchParams.get('page_key') || '';
+        return handleEmbedCommentArea(areaKey, pageKey, request, env, lang, theme);
       }
   
       return new Response("Not Found", { status: 404 });
     }
   };
   
-  async function handleEmbedCommentArea(areaKey, request, env, lang, theme) {
+  async function handleEmbedCommentArea(areaKey, pageKey, request, env, lang, theme) {
     const t = i18n[lang];
     const area = await env.DB.prepare(`
     SELECT * FROM comment_areas WHERE area_key = ?
@@ -515,9 +516,10 @@ function escapeHtml(str) {
             }
             let commentList =  document.getElementById('commentList');
             let comments = []; // 缓存评论数据
+            const pageKey = "${escapeHtml(pageKey)}";
             async function loadComments() {
                 commentList.textContent = '${t.loading}';
-                const res = await fetch('/area/${areaKey}/comments');
+                const res = await fetch(\`/area/${areaKey}/comments?page_key=\${encodeURIComponent(pageKey)}\`);
                 if (!res.ok) {
                     commentList.textContent = '${t.notification_not_found}';
                 return;
@@ -564,35 +566,36 @@ function escapeHtml(str) {
                     div.innerHTML = \`
                     <div class="markdown-content markdown-body" style="border-left:2px solid #444; padding-left:8px;">
                         [${t.comment_hidden}，${t.admin_panel_title}]<br/>
-                            \${comment.html_content}
+                            ${comment.html_content}
                         </div>
-                    <small style="color:#777;">\${comment.created_at || ''}</small>
-                        <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
-                            <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
-                            <span onclick="toggleHideComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">
+                    <small style="color:#777;">${comment.created_at || ''}</small>
+                        <span class="reply-btn" data-comment-id="${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
+                            <span class="report-btn" onclick="reportComment(${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
+                            <span onclick="toggleHideComment(${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">
                             ${t.unhide}
                         </span>
-                    \`;
+                    `;
                 } else {
                     // 普通用户: 仅显示「此评论已被隐藏」，点击「查看」再展开
-                    div.innerHTML = \`
+                    div.innerHTML = `
                     <div class="hidden-comment-placeholder">
                         ${t.comment_hidden}
-                            <span class="show-btn" onclick="toggleHiddenContent(this, \${comment.id})">${t.view_comment}</span>
+                            <span class="show-btn" onclick="toggleHiddenContent(this, ${comment.id})">${t.view_comment}</span>
                         </div>
                     <div class="hidden-content" style="display:none;">
-                            <div class="markdown-content markdown-body">\${comment.html_content}</div>
-                        <small style="color:#777;">\${comment.created_at || ''}</small>
-                            <span class="reply-btn" data-comment-id="\${comment.id}"  style="text-decoration: none;">${t.reply_btn}</span>
-                        <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
+                            <div class="markdown-content markdown-body">${comment.html_content}</div>
+                        <small style="color:#777;">${comment.created_at || ''}</small>
+                            <span class="reply-btn" data-comment-id="${comment.id}"  style="text-decoration: none;">${t.reply_btn}</span>
+                        <span class="report-btn" onclick="reportComment(${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
                     </div>
-                    \`;
+                    `;
                 }
             } else {
                 // 未隐藏
                 div.innerHTML = \`
                         <div class="markdown-content markdown-body">\${comment.html_content}</div>
                         <small style="color:#777;">\${comment.created_at || ''}</small>
+                        \${authed && comment.page_key ? \`<small style="color:#007bff; margin-left: 10px;">頁面: \${comment.page_key}</small>\` : ''}
                             <span class="reply-btn" data-comment-id="\${comment.id}"  style="text-decoration: none;">${t.reply_btn}</span>
                         <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
                         <span class="like-btn" data-comment-id="\${comment.id}" onclick="likeComment(\${comment.id})" style="text-decoration: none;">\${comment.liked ? '${t.liked}': '${t.like}'}\${comment.likes > 0 ? \`(\${comment.likes})\`: ''}</span>
@@ -731,13 +734,14 @@ function escapeHtml(str) {
                     const formData = new FormData();
                     formData.append('content', content);
                     formData.append('parent_id', parentId);
+                    formData.append('page_key', pageKey);
                     formData.append('cf-turnstile-response', token);
                 const res = await fetch('/area/${areaKey}/comment', { method: 'POST', body: formData });
                     if (res.ok) {
                         document.getElementById('newComment').value = '';
                         document.getElementById('parentId').value = '0';
                             // 重新获取评论
-                        const res = await fetch('/area/${areaKey}/comments');
+                        const res = await fetch(`/area/${areaKey}/comments?page_key=${encodeURIComponent(pageKey)}`);
                         if (!res.ok) {
                                 showNotification('${t.notification_comment_submit_failed}：' + (await res.text()));
                                 return;
@@ -1098,7 +1102,7 @@ function escapeHtml(str) {
  return;
  }
  
- let html = \`
+ let html = `
  <table class="table-like">
  <thead>
      <tr>
@@ -1112,34 +1116,34 @@ function escapeHtml(str) {
      </tr>
  </thead>
  <tbody>
- \`;
+ `;
  
  areas.forEach(a => {
- html += \`
+ html += `
  <tr>
-     <td>\${a.id}</td>
-     <td>\${a.name}</td>
-     <td>\${a.area_key}</td>
-     <td>\${a.hidden ? '${t.hide}' : '${t.unhide}'}</td>
+     <td>${a.id}</td>
+     <td>${a.name}</td>
+     <td>${a.area_key}</td>
+     <td>${a.hidden ? '${t.hide}' : '${t.unhide}'}</td>
      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-         \${a.intro || ''}
+         ${a.intro || ''}
      </td>
-     <td>\${a.comment_count}</td>
+     <td>${a.comment_count}</td>
      <td>
-         <a href="/area/\${encodeURIComponent(a.area_key)}" target="_blank">${t.view}</a>
-          <span onclick="toggleHideArea('\${encodeURIComponent(a.area_key)}')"  style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">
-           \${a.hidden ? '${t.unhide}' : '${t.hide}'}
+         <a href="/area/${encodeURIComponent(a.area_key)}" target="_blank">${t.view}</a>
+          <span onclick="toggleHideArea('${encodeURIComponent(a.area_key)}')"  style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">
+           ${a.hidden ? '${t.unhide}' : '${t.hide}'}
          </span>
-         <span onclick="deleteArea('\${encodeURIComponent(a.area_key)}')" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.delete}</span>
+         <span onclick="deleteArea('${encodeURIComponent(a.area_key)}')" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.delete}</span>
      </td>
  </tr>
- \`;
+ `;
  });
  
- html += \`
+ html += `
  </tbody>
  </table>
- \`;
+ `;
  div.innerHTML = html;
  }
  // 渲染举报列表
@@ -1149,7 +1153,7 @@ function escapeHtml(str) {
    div.textContent = '${t.no_reports}';
    return;
  }
- let html = \`
+ let html = `
  <table class="table-like">
  <thead>
      <tr>
@@ -1163,29 +1167,29 @@ function escapeHtml(str) {
      </tr>
  </thead>
  <tbody>
- \`;
+ `;
  reports.forEach(r => {
- html += \`
+ html += `
  <tr>
-     <td>\${r.id}</td>
-     <td>\${r.comment_id}</td>
+     <td>${r.id}</td>
+     <td>${r.comment_id}</td>
      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-     \${r.comment_content || ''}
+     ${r.comment_content || ''}
      </td>
- <td>\${r.reason}</td>
- <td>\${r.created_at}</td>
- <td>\${r.resolved ? '${t.hide}' : '${t.unhide}'}</td>
+ <td>${r.reason}</td>
+ <td>${r.created_at}</td>
+ <td>${r.resolved ? '${t.hide}' : '${t.unhide}'}</td>
  <td>
-     \${r.resolved ? '' : \`<span onclick="resolveReport(\${r.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.resolve_report}</span>\`}
-     <span onclick="toggleHideComment(\${r.comment_id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.toggle_hide_comment}</span>
+     ${r.resolved ? '' : `<span onclick="resolveReport(${r.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.resolve_report}</span>`}
+     <span onclick="toggleHideComment(${r.comment_id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.toggle_hide_comment}</span>
      </td>
  </tr>
- \`;
+ `;
  });
- html += \`
+ html += `
  </tbody>
  </table>
- \`;
+ `;
  div.innerHTML = html;
  }
  
@@ -1662,15 +1666,15 @@ function escapeHtml(str) {
  // 管理员可直接查看原文，普通用户默认折叠
  if (authed) {
      // 管理员视角: 可看到原文 + 「隐藏/恢复」操作
-     div.innerHTML = \`
+     div.innerHTML = `
          <div class="markdown-content markdown-body" style="border-left:2px solid #444; padding-left:8px;">
          [${t.comment_hidden}，${t.admin_panel_title}]<br/>
-             \${comment.html_content}
+             ${comment.html_content}
          </div>
-         <small style="color:#777;">\${comment.created_at || ''}</small>
-     <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
-         <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
-     <span onclick="toggleHideComment(\${comment.id})"  style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">
+         <small style="color:#777;">${comment.created_at || ''}</small>
+     <span class="reply-btn" data-comment-id="${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
+         <span class="report-btn" onclick="reportComment(${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
+     <span onclick="toggleHideComment(${comment.id})"  style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">
              ${t.unhide}
      </span>
      \`;
@@ -1694,6 +1698,7 @@ function escapeHtml(str) {
      div.innerHTML = \`
          <div class="markdown-content markdown-body">\${comment.html_content}</div>
              <small style="color:#777;">\${comment.created_at || ''}</small>
+             \${authed && comment.page_key ? \`<small style="color:#007bff; margin-left: 10px;">頁面: \${comment.page_key}</small>\` : ''}
              <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
              <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
              <span class="like-btn" data-comment-id="\${comment.id}" onclick="likeComment(\${comment.id})" style="text-decoration: none;">\${comment.liked ? '${t.liked}': '${t.like}'}\${comment.likes > 0 ? \`(\${comment.likes})\`: ''}</span>
@@ -1948,22 +1953,48 @@ function escapeHtml(str) {
  }
    
  /** 获取评论列表 (JSON) */
- async function handleGetComments(request, env) {
- const url = new URL(request.url);
- const areaKey = decodeURIComponent(url.pathname.replace(/^\/area\/|\/comments$/g, ''));
- // 检查讨论区是否隐藏
- const area = await env.DB.prepare("SELECT hidden FROM comment_areas WHERE area_key=?").bind(areaKey).first();
- if (!area) return new Response(JSON.stringify([]), { status: 200 });
- if (area.hidden === 1) {
-     // 已隐藏 => 访客视角下, 可视为无评论
-     return new Response(JSON.stringify([]), { status: 200 });
- }
- const res = await env.DB.prepare(`
- SELECT id, content, parent_id, created_at, hidden, likes, pinned
- FROM comments
- WHERE area_key = ?
- ORDER BY pinned DESC, likes DESC, created_at DESC
- `).bind(areaKey).all();
+  async function handleGetComments(request, env) {
+    const url = new URL(request.url);
+    const areaKey = decodeURIComponent(url.pathname.replace(/^\/area\/|\/comments$/g, ''));
+    const pageKey = url.searchParams.get('page_key');
+    
+    // 检查讨论区是否隐藏
+    const area = await env.DB.prepare("SELECT hidden FROM comment_areas WHERE area_key=?").bind(areaKey).first();
+    if (!area) return new Response(JSON.stringify([]), { status: 200 });
+    if (area.hidden === 1) {
+        return new Response(JSON.stringify([]), { status: 200 });
+    }
+ 
+    const cookie = parseCookie(request.headers.get("Cookie") || "");
+    const isAdmin = cookie.auth === "1";
+
+    let query = `
+    SELECT id, content, parent_id, created_at, hidden, likes, pinned, page_key
+    FROM comments
+    WHERE area_key = ?
+    `;
+    let params = [areaKey];
+ 
+    if (pageKey !== null) {
+        // pageKey is explicitly provided (even if empty)
+        if (pageKey === '') {
+            query += " AND (page_key IS NULL OR page_key = '') ";
+        } else {
+            query += " AND page_key = ? ";
+            params.push(pageKey);
+        }
+    } else {
+        // No page_key parameter in URL
+        if (!isAdmin) {
+            // Visitors only see global comments
+            query += " AND (page_key IS NULL OR page_key = '') ";
+        }
+        // Admin sees EVERYTHING in this area if no page_key filter is set
+    }
+ 
+    query += " ORDER BY pinned DESC, likes DESC, created_at DESC ";
+ 
+    const res = await env.DB.prepare(query).bind(...params).all();
  const list = res.results || [];
  // 给每条评论加上一个 html_content 字段(渲染Markdown)
  list.forEach(c => {
@@ -2017,9 +2048,10 @@ function escapeHtml(str) {
      return new Response("该讨论区不可用", { status: 403 });
  }
  // 插入数据库 (默认 hidden=0, likes=0, pinned=0)
+ const pageKey = formData.get('page_key') || '';
  await env.DB.prepare(`
- INSERT INTO comments (area_key, content, parent_id, hidden, likes, pinned) VALUES (?, ?, ?, 0, 0, 0)
- `).bind(areaKey, content, parentId).run();
+ INSERT INTO comments (area_key, page_key, content, parent_id, hidden, likes, pinned) VALUES (?, ?, ?, ?, 0, 0, 0)
+ `).bind(areaKey, pageKey, content, parentId).run();
  return new Response("OK", { status: 200 });
  }
  /** 喜欢评论 */
