@@ -69,7 +69,12 @@ const i18n = {
             'dark': '深色',
             'like': '讚',
             'liked': '已讚',
-            'show_comment_input': '顯示評論框'
+            'show_comment_input': '顯示評論框',
+            'pin': '置頂',
+            'unpin': '取消置頂',
+            'yes': '是',
+            'no': '否',
+            'delete_comment_confirm': '確認刪除此評論？此操作不可恢復'
         },    'en': {
         'home_title': 'Comment System - Home',
         'login_title': 'Admin Login',
@@ -140,7 +145,12 @@ const i18n = {
         'dark': 'Dark',
         'like': 'Like',
         'liked':'Liked',
-        'show_comment_input': 'Show Comment Input'
+        'show_comment_input': 'Show Comment Input',
+        'pin': 'Pin',
+        'unpin': 'Unpin',
+        'yes': 'Yes',
+        'no': 'No',
+        'delete_comment_confirm': 'Confirm delete this comment? This action cannot be undone'
     }
   };
   
@@ -279,6 +289,11 @@ function escapeHtml(str) {
           const commentId = parseInt(matchToggleHideComment[1], 10);
           return handleToggleHideComment(commentId, request, env);
         }
+        const matchDeleteComment = pathname.match(/^\/admin\/comment\/(\d+)\/delete$/);
+        if (matchDeleteComment) {
+          const commentId = parseInt(matchDeleteComment[1], 10);
+          return handleDeleteComment(commentId, request, env);
+        }
       }
   
       // 获取更详尽的管理员信息，如讨论区列表、举报列表
@@ -315,6 +330,8 @@ function escapeHtml(str) {
     if (!area || area.hidden === 1) {
         return new Response("Comment area not available", { status: 404 });
     }
+    const cookie = parseCookie(request.headers.get("Cookie") || "");
+    const authed = (cookie.auth === "1");
     const html = `
     <!DOCTYPE html>
     <html lang="${lang}" data-theme="${theme}">
@@ -487,6 +504,10 @@ function escapeHtml(str) {
     <button id="showInputBtn">${t.show_comment_input}</button>
     </div>
     <div id="commentForm" class="form-group" style="display: none;">
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <input type="text" id="newNickname" placeholder="${lang === 'zh-TW' ? '暱稱 (選填)' : 'Nickname (Optional)'}" style="flex: 1; background: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px; border-radius: 3px; font-size: 14px; box-sizing: border-box;" maxlength="50" />
+                <input type="email" id="newEmail" placeholder="${lang === 'zh-TW' ? '電子郵件 (不公開)' : 'Email (Private)'}" style="flex: 1; background: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px; border-radius: 3px; font-size: 14px; box-sizing: border-box;" maxlength="100" />
+            </div>
             <textarea id="newComment" placeholder="${t.comment_placeholder}"></textarea>
             <div class="comment-action">
                 <input type="hidden" id="parentId" value="0" />
@@ -517,6 +538,11 @@ function escapeHtml(str) {
             let commentList =  document.getElementById('commentList');
             let comments = []; // 缓存评论数据
             const pageKey = "${escapeHtml(pageKey)}";
+            const lang = "${lang}";
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            }
             async function loadComments() {
                 commentList.textContent = '${t.loading}';
                 const res = await fetch(\`/area/${areaKey}/comments?page_key=\${encodeURIComponent(pageKey)}\`);
@@ -592,14 +618,18 @@ function escapeHtml(str) {
                     }
                 } else {
                     // 未隱藏
-                    div.innerHTML = \`
-                            <div class="markdown-content markdown-body">\${comment.html_content}</div>
-                            <small style="color:#777;">\${comment.created_at || ''}</small>
-                            \${authed && comment.page_key ? \`<small style="color:#117bff; font-weight: bold; margin-left: 10px;">來源頁面: \${comment.page_key}</small>\` : ''}
+                    
+                    const displayName = comment.nickname ? escapeHtml(comment.nickname) : (lang === 'zh-TW' ? '匿名' : 'Anonymous');
+                    const adminInfo = authed ? \`<br/><small style="color:#d9534f; font-weight:bold;">\${comment.email ? 'Email: ' + escapeHtml(comment.email) + ' | ' : ''}IP: \${comment.ip || 'Unknown'}</small>\` : '';
+                            \${adminInfo}
                                 <span class="reply-btn" data-comment-id="\${comment.id}"  style="text-decoration: none;">${t.reply_btn}</span>
                             <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
                             <span class="like-btn" data-comment-id="\${comment.id}" onclick="likeComment(\${comment.id})" style="text-decoration: none;">\${comment.liked ? '${t.liked}': '${t.like}'}\${comment.likes > 0 ? \`(\${comment.likes})\`: ''}</span>
-                            \${authed ? \`<span onclick="toggleHideComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.hide}</span>  <span onclick="togglePinComment(\${comment.id})"  style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">\${comment.pinned ? '${t.unhide}' : '${t.hide}'}</span>\` : ''}
+                            ${authed ? `
+                                <span onclick="toggleHideComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.hide}</span>
+                                <span onclick="togglePinComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">\${comment.pinned ? '${t.unpin}' : '${t.pin}'}</span>
+                                <span onclick="deleteComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.delete}</span>
+                            ` : ''}
                     \`;
                 }
                 // 若有子回覆
@@ -635,7 +665,22 @@ function escapeHtml(str) {
                     showNotification('${t.notification_toggle_failed}：' + (await res.text()));
                 }
             }
-        // 切换单条评论置顶(仅管理员)
+            // 刪除單條評論 (管理員)
+            window.deleteComment = async (commentId) => {
+                if (!confirm('${t.delete_comment_confirm}')) return;
+                const res = await fetch('/admin/comment/' + commentId + '/delete', { method: 'POST' });
+                if (res.ok) {
+                    showNotification('${t.notification_delete_success}');
+                    const index = comments.findIndex(c => c.id === commentId);
+                    if (index !== -1) {
+                        comments.splice(index, 1);
+                    }
+                    renderComments(comments);
+                } else {
+                    showNotification('${t.notification_delete_failed}：' + (await res.text()));
+                }
+            }
+            // 切换单条评论置顶(仅管理员)
             window.togglePinComment = async (commentId) => {
                 const res = await fetch('/admin/comment/' + commentId + '/togglePin', { method: 'POST' });
                 if (res.ok) {
@@ -724,6 +769,8 @@ function escapeHtml(str) {
                 // 提交评论
                 submitButton.addEventListener('click', async () => {
                     const content = document.getElementById('newComment').value.trim();
+                    const nickname = document.getElementById('newNickname')?.value.trim() || '';
+                    const email = document.getElementById('newEmail')?.value.trim() || '';
                     const parentId = document.getElementById('parentId').value || '0';
                     if (!content) {
                         showNotification('${t.notification_comment_missing_content}');
@@ -733,13 +780,17 @@ function escapeHtml(str) {
                     const token = document.querySelector('[name="cf-turnstile-response"]')?.value || '';
                     const formData = new FormData();
                     formData.append('content', content);
+                    formData.append('nickname', nickname);
+                    formData.append('email', email);
                     formData.append('parent_id', parentId);
                     formData.append('page_key', pageKey);
                     formData.append('cf-turnstile-response', token);
                 const res = await fetch('/area/${areaKey}/comment', { method: 'POST', body: formData });
                     if (res.ok) {
                         document.getElementById('newComment').value = '';
-                        document.getElementById('parentId').value = '0';
+                    if (document.getElementById('newNickname')) document.getElementById('newNickname').value = '';
+                    if (document.getElementById('newEmail')) document.getElementById('newEmail').value = '';
+                    document.getElementById('parentId').value = '0';
                             // 重新获取评论
                         const res = await fetch(\`/area/${areaKey}/comments?page_key=\${encodeURIComponent(pageKey)}\`);
                         if (!res.ok) {
@@ -1158,10 +1209,11 @@ function escapeHtml(str) {
    html += '<td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (r.comment_content || '') + '</td>';
    html += '<td>' + r.reason + '</td>';
    html += '<td>' + r.created_at + '</td>';
-   html += '<td>' + (r.resolved ? '${t.hide}' : '${t.unhide}') + '</td>';
+   html += '<td>' + (r.resolved ? '${t.yes}' : '${t.no}') + '</td>';
    html += '<td>';
    if (!r.resolved) { html += '<span onclick="resolveReport(' + r.id + ')" style="text-decoration:none;display:inline-block;cursor:pointer;margin-left:10px;">${t.resolve_report}</span>'; }
    html += '<span onclick="toggleHideComment(' + r.comment_id + ')" style="text-decoration:none;display:inline-block;cursor:pointer;margin-left:10px;">${t.toggle_hide_comment}</span>';
+   html += '<span onclick="deleteComment(' + r.comment_id + ')" style="text-decoration:none;display:inline-block;cursor:pointer;margin-left:10px;">${t.delete}</span>';
    html += '</td></tr>';
  });
  html += '</tbody></table>';
@@ -1210,6 +1262,18 @@ function escapeHtml(str) {
      showNotification('${t.notification_delete_failed}：' + (await res.text()));
  }
  }
+ 
+  // 删除评论
+  async function deleteComment(commentId) {
+  if (!confirm('${t.delete_comment_confirm}')) return;
+  const res = await fetch('/admin/comment/' + commentId + '/delete', { method: 'POST' });
+  if (res.ok) {
+      showNotification('${t.notification_delete_success}');
+    await fetchExtendedInfo();
+  } else {
+    showNotification('${t.notification_delete_failed}：' + (await res.text()));
+  }
+  }
  
  // 处理举报
  async function resolveReport(reportId) {
@@ -1369,6 +1433,8 @@ function escapeHtml(str) {
          // 如果讨论区已被隐藏，则访客不可访问
          return new Response("讨论区不可用", { status: 403 });
      }
+    const cookie = parseCookie(request.headers.get("Cookie") || "");
+    const authed = (cookie.auth === "1");
    // 显示讨论区页面
  const html = `
  <!DOCTYPE html>
@@ -1564,7 +1630,11 @@ function escapeHtml(str) {
  <button id="showInputBtn">${t.show_comment_input}</button>
  </div>
  <div id="commentForm" class="form-group" style="display: none;">
-     <textarea id="newComment" placeholder="${t.comment_placeholder}"></textarea>
+    <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 10px;">
+        <input type="text" id="newNickname" placeholder="${lang === 'zh-TW' ? '暱稱 (選填)' : 'Nickname (Optional)'}" style="flex: 1; background: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px; border-radius: 3px; font-size: 14px; box-sizing: border-box;" maxlength="50" />
+        <input type="email" id="newEmail" placeholder="${lang === 'zh-TW' ? '電子郵件 (不公開)' : 'Email (Private)'}" style="flex: 1; background: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px; border-radius: 3px; font-size: 14px; box-sizing: border-box;" maxlength="100" />
+    </div>
+    <textarea id="newComment" placeholder="${t.comment_placeholder}"></textarea>
      <div class="comment-action">
          <input type="hidden" id="parentId" value="0" />
          <div class="cf-challenge" data-sitekey="${env.TURNSTILE_SITEKEY || ''}" data-theme="auto" style="display:none;"></div>
@@ -1595,6 +1665,11 @@ function escapeHtml(str) {
   }
   let commentList =  document.getElementById('commentList');
   let comments = []; // 緩存評論數據
+  const lang = "${lang}";
+  function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
   async function loadComments() {
   commentList.textContent = '${t.loading}';
   const res = await fetch(location.pathname + '/comments');
@@ -1641,44 +1716,48 @@ function escapeHtml(str) {
   // 管理員可直接查看原文，普通用戶默認折疊
   if (authed) {
       // 管理員視角: 可看到原文 + 「隱藏/恢復」操作
-      div.innerHTML = \`
-          <div class="markdown-content markdown-body" style="border-left:2px solid #444; padding-left:8px;">
-          [${t.comment_hidden}，${t.admin_panel_title}]<br/>
-              \${comment.html_content}
-          </div>
-          <small style="color:#777;">\${comment.created_at || ''}</small>
-      <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
-          <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
-      <span onclick="toggleHideComment(\${comment.id})"  style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">
-              ${t.unhide}
-      </span>
-      \`;
+        div.innerHTML = \`
+            <div class="markdown-content markdown-body" style="border-left:2px solid #444; padding-left:8px;">
+            [${t.comment_hidden}，${t.admin_panel_title}]<br/>
+                \${comment.html_content}
+            </div>
+            <small style="color:#777;">\${comment.created_at || ''}</small>
+        <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
+            <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
+        <span onclick="toggleHideComment(\${comment.id})"  style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">
+                ${t.unhide}
+        </span>
+        \`;
   } else {
       // 普通用戶: 僅顯示「此評論已被隱藏」，點擊「查看」再展開
-          div.innerHTML = \`
-              <div class="hidden-comment-placeholder">
-                  ${t.comment_hidden}
+        div.innerHTML = \`
+            <div class="hidden-comment-placeholder">
+                ${t.comment_hidden}
                     <span class="show-btn" onclick="toggleHiddenContent(this, \${comment.id})">${t.view_comment}</span>
-              </div>
-          <div class="hidden-content" style="display:none;">
-                  <div class="markdown-content markdown-body">\${comment.html_content}</div>
-              <small style="color:#777;">\${comment.created_at || ''}</small>
-              <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
-              <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
-          </div>
-          \`;
+            </div>
+        <div class="hidden-content" style="display:none;">
+                <div class="markdown-content markdown-body">\${comment.html_content}</div>
+            <small style="color:#777;">\${comment.created_at || ''}</small>
+            <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
+            <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
+        </div>
+        \`;
   }
   } else {
   // 未隱藏
-      div.innerHTML = \`
-          <div class="markdown-content markdown-body">\${comment.html_content}</div>
-              <small style="color:#777;">\${comment.created_at || ''}</small>
-              \${authed && comment.page_key ? \`<small style="color:#117bff; font-weight: bold; margin-left: 10px;">來源頁面: \${comment.page_key}</small>\` : ''}
-              <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
-              <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
-              <span class="like-btn" data-comment-id="\${comment.id}" onclick="likeComment(\${comment.id})" style="text-decoration: none;">\${comment.liked ? '${t.liked}': '${t.like}'}\${comment.likes > 0 ? \`(\${comment.likes})\`: ''}</span>
-              \${authed ? \`<span onclick="toggleHideComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.hide}</span>  <span onclick="togglePinComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">\${comment.pinned ? '${t.unhide}' : '${t.hide}'}</span>\` : ''}
-      \`;
+      
+                    const displayName = comment.nickname ? escapeHtml(comment.nickname) : (lang === 'zh-TW' ? '匿名' : 'Anonymous');
+                    const adminInfo = authed ? \`<br/><small style="color:#d9534f; font-weight:bold;">\${comment.email ? 'Email: ' + escapeHtml(comment.email) + ' | ' : ''}IP: \${comment.ip || 'Unknown'}</small>\` : '';
+              div.innerHTML = \`
+                      <div style="font-weight: bold; margin-bottom: 5px; color: var(--link-hover-color); font-size: 0.9em;">\${displayName}</div>
+                      <div class="markdown-content markdown-body">\${comment.html_content}</div>
+                      <small style="color:#777;">\${comment.created_at || ''}</small>
+                      \${authed && comment.page_key ? \`<small style="color:#117bff; font-weight: bold; margin-left: 10px;">來源頁面: \${comment.page_key}</small>\` : ''}
+                      \${adminInfo}
+        <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
+        <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
+        <span class="like-btn" data-comment-id="\${comment.id}" onclick="likeComment(\${comment.id})" style="text-decoration: none;">\${comment.liked ? '${t.liked}': '${t.like}'}\${comment.likes > 0 ? \`(\${comment.likes})\`: ''}</span>
+        ${authed ? `\n                  <span onclick="toggleHideComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.hide}</span>\n                  <span onclick="togglePinComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">\${comment.pinned ? '${t.unpin}' : '${t.pin}'}</span>\n                  <span onclick="deleteComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.delete}</span>\n              ` : ''}\n      \`;
   }
   // 若有子回覆
   if (comment.replies && comment.replies.length > 0) {
@@ -1728,6 +1807,21 @@ function escapeHtml(str) {
              showNotification('${t.notification_toggle_failed}：' + (await res.text()));
         }
  }
+  // 刪除單條評論 (管理員)
+  window.deleteComment = async (commentId) => {
+      if (!confirm('${t.delete_comment_confirm}')) return;
+      const res = await fetch('/admin/comment/' + commentId + '/delete', { method: 'POST' });
+      if (res.ok) {
+          showNotification('${t.notification_delete_success}');
+          const index = comments.findIndex(c => c.id === commentId);
+          if (index !== -1) {
+              comments.splice(index, 1);
+          }
+          renderComments(comments);
+      } else {
+          showNotification('${t.notification_delete_failed}：' + (await res.text()));
+      }
+  }
  // 监听输入框
  const newCommentInput = document.getElementById('newComment');
    const submitButton = document.getElementById('submitBtn');
@@ -1803,7 +1897,9 @@ function escapeHtml(str) {
  // 提交评论
  submitButton.addEventListener('click', async () => {
      const content = document.getElementById('newComment').value.trim();
-     const parentId = document.getElementById('parentId').value || '0';
+                    const nickname = document.getElementById('newNickname')?.value.trim() || '';
+                    const email = document.getElementById('newEmail')?.value.trim() || '';
+                    const parentId = document.getElementById('parentId').value || '0';
      if (!content) {
          showNotification('${t.notification_comment_missing_content}');
          return;
@@ -1812,13 +1908,17 @@ function escapeHtml(str) {
      const token = document.querySelector('[name="cf-turnstile-response"]')?.value || '';
      const formData = new FormData();
      formData.append('content', content);
-     formData.append('parent_id', parentId);
+                    formData.append('nickname', nickname);
+                    formData.append('email', email);
+                    formData.append('parent_id', parentId);
      formData.append('cf-turnstile-response', token);
      
      const res = await fetch(location.pathname + '/comment', { method: 'POST', body: formData });
          if (res.ok) {
              document.getElementById('newComment').value = '';
-             document.getElementById('parentId').value = '0';
+                    if (document.getElementById('newNickname')) document.getElementById('newNickname').value = '';
+                    if (document.getElementById('newEmail')) document.getElementById('newEmail').value = '';
+                    document.getElementById('parentId').value = '0';
          // 重新获取评论
            const res = await fetch(location.pathname + '/comments');
            if (!res.ok) {
@@ -1944,7 +2044,7 @@ function escapeHtml(str) {
     const isAdmin = cookie.auth === "1";
 
     let query = `
-    SELECT id, content, parent_id, created_at, hidden, likes, pinned, page_key
+    SELECT id, content, parent_id, created_at, hidden, likes, pinned, page_key, nickname${isAdmin ? ', email, ip' : ''}
     FROM comments
     WHERE area_key = ?
     `;
@@ -1991,8 +2091,11 @@ function escapeHtml(str) {
  const url = new URL(request.url);
  const areaKey = decodeURIComponent(url.pathname.replace(/^\/area\/|\/comment$/g, ''));
  const formData = await request.formData();
- const content = formData.get('content') || '';
- const parentId = parseInt(formData.get('parent_id') || '0', 10);
+  const content = formData.get('content') || '';
+  const nickname = (formData.get('nickname') || '').substring(0, 50);
+  const email = (formData.get('email') || '').substring(0, 100);
+  const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
+  const parentId = parseInt(formData.get('parent_id') || '0', 10);
  const token = formData.get('cf-turnstile-response');
  
  if (!content) {
@@ -2025,8 +2128,8 @@ function escapeHtml(str) {
  // 插入数据库 (默认 hidden=0, likes=0, pinned=0)
  const pageKey = formData.get('page_key') || '';
  await env.DB.prepare(`
- INSERT INTO comments (area_key, page_key, content, parent_id, hidden, likes, pinned) VALUES (?, ?, ?, ?, 0, 0, 0)
- `).bind(areaKey, pageKey, content, parentId).run();
+ INSERT INTO comments (area_key, page_key, content, nickname, email, ip, parent_id, hidden, likes, pinned) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)
+  `).bind(areaKey, pageKey, content, nickname, email, ip, parentId).run();
  return new Response("OK", { status: 200 });
  }
  /** 喜欢评论 */
@@ -2113,6 +2216,23 @@ function escapeHtml(str) {
  const newHidden = comment.hidden === 1 ? 0 : 1;
  await env.DB.prepare("UPDATE comments SET hidden=? WHERE id=?").bind(newHidden, commentId).run();
  return new Response("OK", { status: 200 });
+ }
+ 
+ /** 刪除單條評論 (管理員) */
+ async function handleDeleteComment(commentId, request, env) {
+     const cookie = parseCookie(request.headers.get("Cookie") || "");
+     if (cookie.auth !== "1") {
+         return new Response("Unauthorized", { status: 401 });
+     }
+     // 先刪除關聯的舉報
+     await env.DB.prepare("DELETE FROM reports WHERE comment_id=?").bind(commentId).run();
+     // 再刪除評論本身
+     const res = await env.DB.prepare("DELETE FROM comments WHERE id=?").bind(commentId).run();
+     if (res.success) {
+       return new Response("OK", { status: 200 });
+     } else {
+       return new Response("Delete failed", { status: 500 });
+     }
  }
  /** 切换单条评论置顶状态 (管理员) */
  async function handleTogglePinComment(commentId, request, env) {

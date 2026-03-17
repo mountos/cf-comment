@@ -197,14 +197,18 @@ Your Worker will not function correctly yet without additional configurations.
    );
 
    CREATE TABLE comments (
-     id INTEGER PRIMARY KEY AUTOINCREMENT,
-     area_key TEXT NOT NULL,
-     content TEXT NOT NULL,
-     parent_id INTEGER DEFAULT 0,
-     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-     hidden INTEGER DEFAULT 0,
-     likes INTEGER DEFAULT 0,
-     pinned INTEGER DEFAULT 0
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       area_key TEXT NOT NULL,
+       page_key TEXT,
+       content TEXT NOT NULL,
+       nickname TEXT,
+       email TEXT,
+       ip TEXT,
+       parent_id INTEGER DEFAULT 0,
+       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+       hidden INTEGER DEFAULT 0,
+       likes INTEGER DEFAULT 0,
+       pinned INTEGER DEFAULT 0
    );
 
    CREATE TABLE reports (
