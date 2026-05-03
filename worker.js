@@ -177,10 +177,10 @@ function escapeHtml(str) {
       .replace(/'/g, '&#39;');
   }
   
-  /** 使用 Marked.js 解析 Markdown */
+  /** 使用 Marked.js 解析 Markdown 或處理基本換行 */
   function parseMarkdown(md) {
     if (!md) return '';
-    return  marked ? marked.parse(md, { breaks: true }) : md;
+    return  marked ? marked.parse(md, { breaks: true }) : md.replace(/\r?\n/g, '<br/>');
   }
   
   // 获取语言
@@ -234,7 +234,20 @@ function escapeHtml(str) {
       // 初始化主题
       const theme = await getTheme(request);
   
-      // 路由分发
+      // Handle OPTIONS preflight requests
+      if (request.method === "OPTIONS") {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Cookie",
+            "Access-Control-Allow-Credentials": "true"
+          }
+        });
+      }
+
+      // 路由分發
       if (pathname === '/' && request.method === 'GET') {
         // 首页：显示登录表单 or 管理面板
         return handleHomePage(request, env, lang, theme);
@@ -582,6 +595,9 @@ function escapeHtml(str) {
                 });
             }
             function renderCommentItem(comment) {
+                const displayName = comment.nickname ? escapeHtml(comment.nickname) : (lang === 'zh-TW' ? '匿名' : 'Anonymous');
+                const adminInfo = authed ? '<br/><small style="color:#d9534f; font-weight:bold;">' + (comment.email ? 'Email: ' + escapeHtml(comment.email) + ' | ' : '') + 'IP: ' + (comment.ip || 'Unknown') + '</small>' : '';
+
                 const div = document.createElement('div');
                 div.className = 'comment-item' + (comment.parent_id ? ' reply-item' : '');
                 // 假如評論被隱藏
@@ -618,18 +634,19 @@ function escapeHtml(str) {
                     }
                 } else {
                     // 未隱藏
-                    
-                    const displayName = comment.nickname ? escapeHtml(comment.nickname) : (lang === 'zh-TW' ? '匿名' : 'Anonymous');
-                    const adminInfo = authed ? \`<br/><small style="color:#d9534f; font-weight:bold;">\${comment.email ? 'Email: ' + escapeHtml(comment.email) + ' | ' : ''}IP: \${comment.ip || 'Unknown'}</small>\` : '';
-                            \${adminInfo}
-                                <span class="reply-btn" data-comment-id="\${comment.id}"  style="text-decoration: none;">${t.reply_btn}</span>
-                            <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
-                            <span class="like-btn" data-comment-id="\${comment.id}" onclick="likeComment(\${comment.id})" style="text-decoration: none;">\${comment.liked ? '${t.liked}': '${t.like}'}\${comment.likes > 0 ? \`(\${comment.likes})\`: ''}</span>
-                            ${authed ? `
-                                <span onclick="toggleHideComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.hide}</span>
-                                <span onclick="togglePinComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">\${comment.pinned ? '${t.unpin}' : '${t.pin}'}</span>
-                                <span onclick="deleteComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.delete}</span>
-                            ` : ''}
+                    div.innerHTML = \`
+                        <div style="font-weight: bold; margin-bottom: 5px; color: var(--link-hover-color); font-size: 0.9em;">\${displayName}</div>
+                        <div class="markdown-content markdown-body">\${comment.html_content}</div>
+                        <small style="color:#777;">\${comment.created_at || ''}</small>
+                        \${adminInfo}
+                        <span class="reply-btn" data-comment-id="\${comment.id}" style="text-decoration: none;">${t.reply_btn}</span>
+                        <span class="report-btn" onclick="reportComment(\${comment.id})" style="text-decoration: none;">${t.report_comment}</span>
+                        <span class="like-btn" data-comment-id="\${comment.id}" onclick="likeComment(\${comment.id})" style="text-decoration: none;">\${comment.liked ? '${t.liked}': '${t.like}'}\${comment.likes > 0 ? \`(\${comment.likes})\`: ''}</span>
+                        ${authed ? `
+                            <span onclick="toggleHideComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.hide}</span>
+                            <span onclick="togglePinComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">\${comment.pinned ? '${t.unpin}' : '${t.pin}'}</span>
+                            <span onclick="deleteComment(\${comment.id})" style="text-decoration: none;display: inline-block;cursor: pointer; margin-left: 10px;">${t.delete}</span>
+                        ` : ''}
                     \`;
                 }
                 // 若有子回覆
@@ -969,9 +986,9 @@ function escapeHtml(str) {
  .close-btn { cursor: pointer; margin-left: 20px; font-weight: bold; }
  .admin-section { margin-top: 30px; }
  
- .table-like { width: 100%; border-collapse: collapse; }
- .table-like th, .table-like td { border: none; padding: 8px; text-align: left;} /*  去除表格边框 */
- .table-like th { background: var(--table-header-bg-color); }
+ .table-like { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; }
+ .table-like th, .table-like td { border: 1px solid var(--border-color); padding: 12px 8px; text-align: left; }
+ .table-like th { background: var(--table-header-bg-color); font-weight: bold; }
  
  @media (max-width: 600px) {
  body { margin: 20px auto; padding: 10px; }
@@ -1371,9 +1388,9 @@ function escapeHtml(str) {
  async function handleLogin(request, env) {
      try {
          const data = await request.json();
-         const password = data.password || '';
+         const password = (data.password || '').trim();
  
-         if (password === env.ADMIN_PASS) {
+         if (password === String(env.ADMIN_PASS || '')) {
              // 密码正确 => 设置Cookie
              const res = new Response(JSON.stringify({ success: true }), {
                  headers: { 'Content-Type': 'application/json;charset=UTF-8' }
