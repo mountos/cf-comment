@@ -185,6 +185,19 @@ function escapeHtml(str) {
   
   // 获取语言
   async function getLanguage(request) {
+    const url = new URL(request.url);
+    const urlLang = url.searchParams.get('lang');
+    if (urlLang) {
+      if (urlLang.startsWith('zh')) {
+        return 'zh-TW';
+      }
+      if (urlLang === 'en' || urlLang === 'ja') {
+        return 'en';
+      }
+      if (urlLang in i18n) {
+        return urlLang;
+      }
+    }
     const cookie = parseCookie(request.headers.get("Cookie") || "");
     if (cookie.lang) {
       return cookie.lang;
